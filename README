@@ -19,11 +19,7 @@ Unbed takes a single command-line argument specifying the
 package-scoped named struct type and embedded field to rewrite.
 
 	$ unbed '"cmd/internal/obj".LSym.FuncInfo'
-	=== /home/mdempsky/wd/go/src/cmd/internal/obj/ld.go (1 matches)
-	=== /home/mdempsky/wd/go/src/cmd/internal/obj/objfile.go (13 matches)
-	=== /home/mdempsky/wd/go/src/cmd/internal/obj/pass.go (3 matches)
-	=== /home/mdempsky/wd/go/src/cmd/internal/obj/pcln.go (9 matches)
-	...
+	Rewrote 161 selections in 20 files in 9 packages.
 
 Similar to gorename, quotes may be omitted for single-segment package
 paths like "fmt".

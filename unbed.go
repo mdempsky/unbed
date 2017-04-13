@@ -67,22 +67,33 @@ func main() {
 	}
 	field = obj.(*types.Var)
 
+	totalCount := 0
+	totalFiles := 0
+	totalPackages := 0
+
 	for _, info := range prog.InitialPackages() {
+		pkgMatch := false
 		for _, file := range info.Files {
 			u := unbedder{info: info}
 			ast.Walk(&u, file)
 			if len(u.res) != 0 {
+				totalCount += len(u.res)
+				totalFiles++
+				pkgMatch = true
+
 				edit(fset.File(file.Pos()), u.res)
 			}
 		}
+		if pkgMatch {
+			totalPackages++
+		}
 	}
+
+	fmt.Fprintf(os.Stderr, "Rewrote %d selections in %d files in %d packages.\n", totalCount, totalFiles, totalPackages)
 }
 
 func edit(f *token.File, pos []token.Pos) {
-	filename := f.Name()
-	fmt.Fprintf(os.Stderr, "=== %s (%d matches)\n", filename, len(pos))
-
-	buf, err := ioutil.ReadFile(filename)
+	buf, err := ioutil.ReadFile(f.Name())
 	if err != nil {
 		log.Fatal(err)
 	}
