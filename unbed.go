@@ -61,8 +61,8 @@ func main() {
 	ownerPkg := prog.Package(pkgPath).Pkg
 	owner = ownerPkg.Scope().Lookup(typeName).(*types.TypeName).Type().Underlying().(*types.Struct)
 	obj, index, _ := types.LookupFieldOrMethod(owner, false, ownerPkg, fieldName)
-	if v, ok := obj.(*types.Var); !ok || !v.IsField() || len(index) != 1 {
-		log.Fatal("expected immediate field name")
+	if v, ok := obj.(*types.Var); !ok || !v.IsField() || !v.Anonymous() || len(index) != 1 {
+		log.Fatal("expected immediate embedded field name")
 	}
 	fieldIndex = index[0]
 
