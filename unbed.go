@@ -156,7 +156,7 @@ func (e *unbedder) selector(se *ast.SelectorExpr) {
 
 		// Issue #2: don't rewrite unsafe.Offsetof(x.f) to unsafe.Offsetof(x.e.f).
 		if call, ok := e.path[len(e.path)-1].(*ast.CallExpr); ok && e.isUnsafeOffsetof(call.Fun) {
-			fmt.Fprintf(os.Stderr, "%s: implicit field traversal in unsafe.Offsetof argument\n", fset.Position(pos))
+			fmt.Fprintf(os.Stderr, "%s: implicit field traversal in unsafe.Offsetof call\n", fset.Position(pos))
 			return
 		}
 
