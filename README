@@ -1,0 +1,35 @@
+About:
+
+The unbed program rewrites selector expressions to avoid implicit embedded field
+traversals. For example, given:
+
+	type T struct { U }
+	type U struct { f int }
+	var x T
+
+unbed can automatically rewrite all expressions "x.f" to "x.U.f".
+
+Installation:
+
+	$ go get -u github.com/mdempsky/unbed
+
+Usage:
+
+Unbed takes a single command-line argument specifying the
+package-scoped named struct type and embedded field to rewrite.
+
+	$ unbed '"cmd/internal/obj".LSym.FuncInfo'
+	=== /home/mdempsky/wd/go/src/cmd/internal/obj/ld.go (1 matches)
+	=== /home/mdempsky/wd/go/src/cmd/internal/obj/objfile.go (13 matches)
+	=== /home/mdempsky/wd/go/src/cmd/internal/obj/pass.go (3 matches)
+	=== /home/mdempsky/wd/go/src/cmd/internal/obj/pcln.go (9 matches)
+	...
+
+Similar to gorename, quotes may be omitted for single-segment package
+paths like "fmt".
+
+Caveats:
+
+Unbed is alpha quality.
+
+Unbed should support specifying function-scoped and anonymous structs.
