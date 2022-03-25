@@ -107,7 +107,7 @@ func edit(f *token.File, pos []token.Pos) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = ioutil.WriteFile(filename, buf, 0666)
+	err = ioutil.WriteFile(f.Name(), buf, 0o666)
 	if err != nil {
 		log.Fatal(err)
 	}
