@@ -11,7 +11,7 @@ unbed can automatically rewrite all expressions "x.f" to "x.U.f".
 
 Installation:
 
-	$ go get -u github.com/mdempsky/unbed
+	$ go install github.com/mdempsky/unbed@latest
 
 Usage:
 
