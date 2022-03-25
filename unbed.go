@@ -8,7 +8,6 @@ import (
 	"flag"
 	"fmt"
 	"go/ast"
-	"go/build"
 	"go/format"
 	"go/token"
 	"go/types"
@@ -17,8 +16,7 @@ import (
 	"os"
 
 	"golang.org/x/tools/go/ast/astutil"
-	"golang.org/x/tools/go/loader"
-	"golang.org/x/tools/refactor/importgraph"
+	"golang.org/x/tools/go/packages"
 )
 
 var (
@@ -39,27 +37,18 @@ func main() {
 		log.Fatal(err)
 	}
 
-	ctxt := &build.Default
-	conf := loader.Config{
-		Build: ctxt,
-		Fset:  fset,
-	}
+	// TODO(mdempsky): Restore importgraph logic for finding dependent packages.
 
-	_, reverse, errors := importgraph.Build(ctxt)
-	if len(errors) != 0 {
-		log.Fatal(errors)
+	conf := packages.Config{
+		Mode: packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo,
+		Fset: fset,
 	}
-
-	for path := range reverse.Search(pkgPath) {
-		conf.ImportWithTests(path)
-	}
-
-	prog, err := conf.Load()
+	pkgs, err := packages.Load(&conf, pkgPath)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	ownerPkg := prog.Package(pkgPath).Pkg
+	ownerPkg := pkgs[0].Types
 	owner = ownerPkg.Scope().Lookup(typeName).(*types.TypeName).Type().Underlying().(*types.Struct)
 	obj, index, _ := types.LookupFieldOrMethod(owner, false, ownerPkg, fieldName)
 	if v, ok := obj.(*types.Var); !ok || !v.IsField() || !v.Anonymous() || len(index) != 1 {
@@ -71,10 +60,10 @@ func main() {
 	totalFiles := 0
 	totalPackages := 0
 
-	for _, info := range prog.InitialPackages() {
+	for _, pkg := range pkgs {
 		pkgMatch := false
-		for _, file := range info.Files {
-			u := unbedder{info: info}
+		for _, file := range pkg.Syntax {
+			u := unbedder{pkg: pkg}
 			ast.Walk(&u, file)
 			if len(u.res) != 0 {
 				totalCount += len(u.res)
@@ -114,7 +103,7 @@ func edit(f *token.File, pos []token.Pos) {
 }
 
 type unbedder struct {
-	info *loader.PackageInfo
+	pkg  *packages.Package
 	path []ast.Node
 	res  []token.Pos
 }
@@ -134,7 +123,7 @@ func (e *unbedder) Visit(n ast.Node) ast.Visitor {
 }
 
 func (e *unbedder) selector(se *ast.SelectorExpr) {
-	sel, ok := e.info.Selections[se]
+	sel, ok := e.pkg.TypesInfo.Selections[se]
 	if !ok {
 		// Qualified identifier.
 		return
@@ -145,7 +134,7 @@ func (e *unbedder) selector(se *ast.SelectorExpr) {
 		return
 	}
 
-	tv := e.info.Types[se.X]
+	tv := e.pkg.TypesInfo.Types[se.X]
 	typ := tv.Type
 	for _, fi := range idx[:len(idx)-1] {
 		if ptr, ok := typ.Underlying().(*types.Pointer); ok {
@@ -172,7 +161,7 @@ func (e *unbedder) selector(se *ast.SelectorExpr) {
 		}
 
 		// Issue #1: don't rewrite x.f to x.e.f if they don't select the same field.
-		if obj, _, _ := types.LookupFieldOrMethod(tv.Type, tv.Addressable(), e.info.Pkg, fieldName); obj != field {
+		if obj, _, _ := types.LookupFieldOrMethod(tv.Type, tv.Addressable(), e.pkg.Types, fieldName); obj != field {
 			fmt.Fprintf(os.Stderr, "%s: failed to rewrite implicit field traversal\n", fset.Position(pos))
 			return
 		}
@@ -193,6 +182,6 @@ func (e *unbedder) isUnsafeOffsetof(fun ast.Expr) bool {
 		return false
 	}
 
-	b, ok := e.info.Uses[ident].(*types.Builtin)
+	b, ok := e.pkg.TypesInfo.Uses[ident].(*types.Builtin)
 	return ok && b.Name() == "Offsetof"
 }
